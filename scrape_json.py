@@ -13,7 +13,7 @@ brands = [
 ]
 
 # url of search results (page 1)
-query = "lst/{}?sort=price&asc=0&ustate=N,U&atype=C&cy=B&priceto=10000"
+query = "lst/{}?sort=price&asc=0&ustate=N,U&atype=C&cy=B&priceto=8000"
 
 # for getting distance
 distance = pgeocode.GeoDistance('BE')
@@ -27,39 +27,6 @@ driver = webdriver.Chrome("chromedriver")
 
 # full json data for listings
 data = []
-
-for brand in brands:
-    # brand results url
-    url = base_url + query.format(brand.lower().replace(' ','-'))
-
-    # iterate pages
-    page = 1
-    while True:
-        driver.get(url + "&page=" + str(page))
-        elements = driver.find_elements(By.ID, '__NEXT_DATA__')
-        if not elements:
-            break
-        script = elements[0].get_attribute("innerHTML")
-        page_data = json.loads(script)
-        listings = page_data['props']['pageProps']['listings']
-
-        # if max page count is reached, start over with current price as minimum
-        if page == 20:
-            if len(listings) == 20:
-                price = listings[19]['prices']['public']['priceRaw']
-                url = base_url + query.format(brand.lower()) + "&pricefrom=" + str(price)
-                page = 1
-            else:
-                break
-        else:
-            page += 1
-
-        if listings:
-            data.extend(listings)
-        else:
-            break
-
-driver.close()
 
 # reduce json data to relevant data
 def handleListing(l):
@@ -103,12 +70,52 @@ def handleListing(l):
     except:
         return None
 
-formatted = [x for x in map(handleListing, data) if x is not None]
+for brand in brands:
+    brand_listings = []
 
-# store as CSV
-fn = "".join(brands)
-df = pd.DataFrame(formatted) 
-df.to_csv("csv/" + fn + ".csv", index=False, encoding='utf-8')
+    # brand results url
+    url = base_url + query.format(brand.lower().replace(' ','-'))
+
+    # iterate pages
+    page = 1
+    while True:
+        driver.get(url + "&page=" + str(page))
+        elements = driver.find_elements(By.ID, '__NEXT_DATA__')
+        if not elements:
+            break
+        script = elements[0].get_attribute("innerHTML")
+        page_data = json.loads(script)
+        page_listings = page_data['props']['pageProps']['listings']
+
+        # if max page count is reached, start over with current price as minimum
+        if page == 20:
+            if len(page_listings) == 20:
+                price = page_listings[19]['prices']['public']['priceRaw']
+                url = base_url + query.format(brand.lower()) + "&pricefrom=" + str(price)
+                page = 1
+            else:
+                break
+        else:
+            page += 1
+
+        if page_listings:
+            brand_listings.extend(page_listings)
+            
+        else:
+            break
+
+    formatted = [x for x in map(handleListing, brand_listings) if x is not None]
+    df = pd.DataFrame(formatted) 
+    df.to_csv("listings/" + brand + ".csv", index=False, encoding='utf-8')
+
+driver.close()
+
+# formatted = [x for x in map(handleListing, data) if x is not None]
+
+# # store as CSV
+# fn = "".join(brands)
+# df = pd.DataFrame(formatted) 
+# df.to_csv("csv/" + fn + ".csv", index=False, encoding='utf-8')
 
 # store JSON data
 # file_name = query.replace('/', '').replace('?', '') + '.json'

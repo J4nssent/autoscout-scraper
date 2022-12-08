@@ -9,44 +9,45 @@ import requests
 import webbrowser
 from PIL import Image
 from io import BytesIO
+from os import listdir
 
+# settings
 MAX_PRC = 6000
 MAX_MLG = 300000
 
 # constants
-L_offs = 0.05
-B_offs = 0.1
-W_width = 0.1
-S_height = 0.03
-Mk_height = 0.5
-Md_height = 0.8
+WIN_WIDTH, WIN_HEIGHT = 23, 9
 
+V_OFFSET = 0.05
+H_OFFSET = 0.1
+WDG_WIDTH = 0.1
+SLDR_HEIGHT = 0.03
+MK_HEIGHT = 0.5
+MD_HEIGHT = 0.8
 
 # data
-data = pd.read_csv('csv/Mercedes-BenzBMWToyotaVolkswagenHyundaiAudiFiatChevroletOpelDaciaPeugeotRenaultSEATCitroenSubaruNissanPorscheFordVolvoLand RoverJaguarJeepMazdaMitsubishiAlfa RomeoLexusSuzukiSkodaKiaDodgeHonda.csv')
+makes = [s.replace('.csv','') for s in listdir('listings')]
+listings = pd.DataFrame()
 
 # axes
-fig, (menu_ax, graph_ax, detail_ax) = plt.subplots(1, 3, figsize=[23,9])
+fig, (menu_ax, graph_ax, detail_ax) = plt.subplots(1, 3, figsize=[WIN_WIDTH, WIN_HEIGHT])
 menu_ax.axis('off')
 detail_ax.axis('off')
 
 # region make checkboxes
 focused_make = None
-make_msk = [False] * len(data.index)
-make_ax = fig.add_axes((L_offs, 1-Mk_height-B_offs, W_width, Mk_height))
-make_labels = list(data.make.unique())
-make_check = wdg.CheckButtons(
-    ax=make_ax, 
-    labels=make_labels
-)
+make_labels = makes
+make_ax = fig.add_axes((V_OFFSET, 1-H_OFFSET-MK_HEIGHT, WDG_WIDTH, MK_HEIGHT))
+make_check = wdg.CheckButtons(make_ax, makes)
 
 def handle_make(label):
-    index = make_labels.index(label)
-    was_checked = not make_check.get_status()[index]
+    label_index = makes.index(label)
+    was_checked = not make_check.get_status()[label_index]
     global focused_make
     if was_checked and label is not focused_make:   
+        print("focus")
         make_check.eventson = False
-        make_check.set_active(index)
+        make_check.set_active(label_index)
         make_check.eventson = True
         focused_make = label
     else:
@@ -55,24 +56,37 @@ def handle_make(label):
         else:
             focused_make = label
 
-        global make_msk
-        make_msk = [(not b if data.at[i, 'make'] == label else b) for i, b in enumerate(make_msk)]
-    
+        # global make_msk
+        # make_msk = [(not b if listings.at[i, 'make'] == label else b) for i, b in enumerate(make_msk)]
+
+        global listings, model_msk
+        model_msk = [False] * len(listings.index)
+        if not listings.empty and label in listings.make.unique():
+            print("drop")
+            listings.drop(listings[listings.make == label].index)
+        else:
+            print("concat:", 'listings/' + label + '.csv')
+            l = pd.read_csv('listings/' + label + '.csv')
+            print(l)
+            listings = pd.concat([listings, l], ignore_index=True)
+            global age_msk, distance_msk
+            age_msk = distance_msk = [True] * len(listings.index)
+ 
     plot_models(focused_make)
     plot_graph()
     
-
 make_check.on_clicked(handle_make)
 # endregion
 
 # region model checkboxes
-model_msk = [False] * len(data.index)
-model_ax = fig.add_axes((2*L_offs+W_width, B_offs, W_width, Md_height))
+model_msk = [False] * len(listings.index)
+model_ax = fig.add_axes((2*V_OFFSET+WDG_WIDTH, H_OFFSET, WDG_WIDTH, MD_HEIGHT))
 model_check = None
 
 def plot_models(make):
     model_ax.clear()
-    models = sorted(map(str, data[data.make == make].model.unique()))
+    print(listings)
+    models = sorted(map(str, listings[listings.make == make].model.unique()))
     global model_check
     model_check = wdg.CheckButtons(
         ax=model_ax, 
@@ -81,7 +95,7 @@ def plot_models(make):
 
     def handle_model(label):
         global model_msk
-        model_msk = [(not b if data.at[i, 'model'] == label else b) for i, b in enumerate(model_msk)]
+        model_msk = [(not b if listings.at[i, 'model'] == label else b) for i, b in enumerate(model_msk)]
         plot_graph()
 
     model_check.on_clicked(handle_model)
@@ -89,8 +103,8 @@ def plot_models(make):
 
 
 # region price slider
-price_msk = [True] * len(data.index)
-price_ax = fig.add_axes((L_offs, B_offs, W_width, S_height))
+price_msk = [True] * len(listings.index)
+price_ax = fig.add_axes((V_OFFSET, H_OFFSET, WDG_WIDTH, SLDR_HEIGHT))
 price_slide = wdg.Slider(
     ax=price_ax,
     label='price',
@@ -101,7 +115,7 @@ price_slide = wdg.Slider(
 
 def handle_price(val):
     # global price_msk
-    # price_msk = [p < val for p in data.price]
+    # price_msk = [p < val for p in listings.price]
     graph_ax.set_ylim(None, val)
     plot_graph()
 
@@ -109,8 +123,8 @@ price_slide.on_changed(handle_price)
 # endregion
 
 # region mileage slider
-mileage_msk = [True] * len(data.index)
-mileage_ax = fig.add_axes((L_offs, B_offs + 2*S_height, W_width, S_height))
+mileage_msk = [True] * len(listings.index)
+mileage_ax = fig.add_axes((V_OFFSET, H_OFFSET + 2*SLDR_HEIGHT, WDG_WIDTH, SLDR_HEIGHT))
 mileage_slide = wdg.Slider(
     ax=mileage_ax,
     label='mileage',
@@ -121,7 +135,7 @@ mileage_slide = wdg.Slider(
 
 def handle_mileage(val):
     # global mileage_msk
-    # mileage_msk = [m < val for m in data.mileage]
+    # mileage_msk = [m < val for m in listings.mileage]
     graph_ax.set_xlim(None, val)
     plot_graph()
 
@@ -129,8 +143,8 @@ mileage_slide.on_changed(handle_mileage)
 # endregion
 
 # region age slider
-age_msk = [True] * len(data.index)
-age_ax = fig.add_axes((L_offs, B_offs + 4*S_height, W_width, S_height))
+age_msk = [True] * len(listings.index)
+age_ax = fig.add_axes((V_OFFSET, H_OFFSET + 4*SLDR_HEIGHT, WDG_WIDTH, SLDR_HEIGHT))
 age_slide = wdg.Slider(
     ax=age_ax,
     label='age (yr)',
@@ -141,15 +155,15 @@ age_slide = wdg.Slider(
 
 def handle_age(val):
     global age_msk
-    age_msk = [a < val * 365 for a in data['reg-age']]
+    age_msk = [a < val * 365 for a in listings['reg-age']]
     plot_graph()
 
 age_slide.on_changed(handle_age)
 # endregion
 
 # region distance slider
-distance_msk = [True] * len(data.index)
-distance_ax = fig.add_axes((L_offs, B_offs + 6*S_height, W_width, S_height))
+distance_msk = [True] * len(listings.index)
+distance_ax = fig.add_axes((V_OFFSET, H_OFFSET + 6*SLDR_HEIGHT, WDG_WIDTH, SLDR_HEIGHT))
 distance_slide = wdg.Slider(
     ax=distance_ax,
     label='distance (km)',
@@ -160,7 +174,7 @@ distance_slide = wdg.Slider(
 
 def handle_distance(val):
     global distance_msk
-    distance_msk = [d < val for d in data.distance]
+    distance_msk = [d < val for d in listings.distance]
     plot_graph()
 
 distance_slide.on_changed(handle_distance)
@@ -168,6 +182,8 @@ distance_slide.on_changed(handle_distance)
 
 
 # scatter graph
+lim_x, lim_y = MAX_MLG, MAX_MLG
+scatter = None
 graph_ax.set(
     xlabel='mileage',
     ylabel='price',
@@ -175,26 +191,32 @@ graph_ax.set(
 )
 
 def plot_graph(init=False):
-    mask = reduce(np.logical_and, (
-        make_msk, price_msk, mileage_msk, age_msk, distance_msk, model_msk))
-
-    global graph_data
-    graph_data = data[mask]
-
-    global lim_x, lim_y
-    lim_x, lim_y = (graph_ax.get_xlim(), graph_ax.get_ylim())
-
     graph_ax.clear() # TODO: clear scatter instead of axes (scatter.remove)
-    global scatter
-    scatter = graph_ax.scatter(
-        data=graph_data,
-        x='mileage',
-        y='price',
-        s='distance',
-        c='reg-age',
-        cmap='YlOrRd',
-        norm=Normalize(0, 25 * 365)
-    )
+    graph_ax.set_xlim(0, MAX_MLG)
+    graph_ax.set_ylim(0, MAX_PRC)
+
+    if not listings.empty:
+        mask = reduce(np.logical_and, (age_msk, distance_msk, model_msk))
+
+        global graph_data
+        graph_data = listings[mask]
+
+        print('plot_graph:', graph_data)
+
+        global lim_x, lim_y
+        lim_x, lim_y = (graph_ax.get_xlim(), graph_ax.get_ylim())
+
+        global scatter
+        scatter = graph_ax.scatter(
+            data=graph_data,
+            x='mileage',
+            y='price',
+            s='distance',
+            c='reg-age',
+            cmap='YlOrRd',
+            norm=Normalize(0, 25 * 365)
+        )
+
     graph_ax.grid(visible=True, which='both')
     graph_ax.set(
         xlabel='mileage',
@@ -211,8 +233,6 @@ def plot_graph(init=False):
         graph_ax.set_xlim(0, MAX_MLG)
         graph_ax.set_ylim(0, MAX_PRC)
 
-        plot_models(None)
-
     
 
 
@@ -220,7 +240,7 @@ def plot_graph(init=False):
 detail_index = None
 detail_img_ax = fig.add_axes((0.67, 0.45, 0.28, 0.45))
 detail_img_ax.tick_params(left=False, labelleft=False, bottom=False, labelbottom=False)
-detail_text_ax = fig.add_axes((0.67, B_offs, 0.28, 0.3))
+detail_text_ax = fig.add_axes((0.67, H_OFFSET, 0.28, 0.3))
 detail_text_ax.tick_params(left=False, labelleft=False, bottom=False, labelbottom=False)
 detail_text_ar = None
 
@@ -259,11 +279,12 @@ def draw_details():
     plt.draw()
 
 def handle_focus(e):
-    did_hit_point, hit_info = scatter.contains(e)
-    if did_hit_point:
-        global detail_index
-        detail_index = hit_info['ind'][0]  # returns index in df (not row label)
-        draw_details()
+    if scatter is not None:
+        did_hit_point, hit_info = scatter.contains(e)
+        if did_hit_point:
+            global detail_index
+            detail_index = hit_info['ind'][0]  # returns index in df (not row label)
+            draw_details()
         
     if detail_index is not None and img_ar.contains(e)[0]:
         webbrowser.open('https://www.autoscout24.be/nl/aanbod/' + graph_data.iloc[detail_index].at['guid'])
