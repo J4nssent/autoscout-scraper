@@ -23,7 +23,8 @@ zip_code = '2910'
 today = date.today()
 
 base_url = 'https://www.autoscout24.be/nl/'
-driver = webdriver.Chrome("chromedriver")
+driver = webdriver.Safari()
+driver.maximize_window()
 
 # full json data for listings
 data = []
@@ -79,9 +80,13 @@ for brand in brands:
     # iterate pages
     page = 1
     while True:
+        print('page', page)
+
         driver.get(url + "&page=" + str(page))
+        driver.implicitly_wait(1)
         elements = driver.find_elements(By.ID, '__NEXT_DATA__')
         if not elements:
+            print('not elements')
             break
         script = elements[0].get_attribute("innerHTML")
         page_data = json.loads(script)
@@ -90,6 +95,8 @@ for brand in brands:
         # if max page count is reached, start over with current price as minimum
         if page == 20:
             if len(page_listings) == 20:
+                print('len(page_listings) == 20')
+                print(page_listings)
                 price = page_listings[19]['prices']['public']['priceRaw']
                 url = base_url + query.format(brand.lower()) + "&pricefrom=" + str(price)
                 page = 1
@@ -99,8 +106,11 @@ for brand in brands:
             page += 1
 
         if page_listings:
-            brand_listings.extend(page_listings)
-            
+            if brand_listings and brand_listings[-1] == page_listings[-1]:
+                print('get fucked')
+                break
+            else:
+                brand_listings.extend(page_listings)
         else:
             break
 
