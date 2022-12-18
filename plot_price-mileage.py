@@ -10,6 +10,7 @@ from PIL import Image
 from io import BytesIO
 from os import listdir
 
+
 # settings
 MAX_PRC = 6000
 MAX_MLG = 300000
@@ -23,6 +24,7 @@ WDG_WIDTH = 0.1
 SLDR_HEIGHT = 0.03
 MK_HEIGHT = 0.5
 MD_HEIGHT = 0.8
+FL_HEIGHT = 0.06
 
 # data
 makes = [s.replace('.csv','') for s in listdir('listings')]
@@ -32,6 +34,63 @@ listings = pd.DataFrame()
 fig, (menu_ax, graph_ax, detail_ax) = plt.subplots(1, 3, figsize=[WIN_WIDTH, WIN_HEIGHT])
 menu_ax.axis('off')
 detail_ax.axis('off')
+
+# scatter graph
+scatter = None
+lim_x, lim_y = MAX_MLG, MAX_PRC
+mac_vehicle_age = 50
+max_distance = 200
+max_listing_age = 2000
+
+def reset_graph_ax():
+    graph_ax.clear()
+    graph_ax.set_xlim(0, lim_x)
+    graph_ax.set_ylim(0, lim_y)
+    graph_ax.grid(
+        visible=True, 
+        which='both'
+    )
+    graph_ax.set(
+        xlabel='mileage',
+        ylabel='price',
+        frame_on=True,
+    )
+
+def plot_graph(_=None):
+    reset_graph_ax()
+
+    if not listings.empty:
+        age_msk = [a < mac_vehicle_age * 365 for a in listings.get('reg-age')]
+        distance_msk = [d < max_distance for d in listings.get('distance')]
+        # listing_mask = [a < max_listing_age for a in listings.get('listing-age')]
+        fuel_mask = [(fuel_types.get(t) if fuel_types.get(t) is not None else False) for t in listings.get('fuel-type')]
+
+        mask = reduce(np.logical_and, (
+            age_msk, 
+            distance_msk, 
+            # listing_mask, 
+            fuel_mask, 
+            model_msk)
+        )
+
+        global graph_data
+        graph_data = listings[mask]
+
+        global scatter
+        scatter = graph_ax.scatter(
+            data=graph_data,
+            x='mileage',
+            y='price',
+            s='distance',
+            c='reg-age',
+            cmap='YlOrRd',
+            norm=Normalize(0, 25 * 365)
+        )
+
+        graph_ax.set_xlim(0, lim_x)
+        graph_ax.set_ylim(0, lim_y)
+
+    plt.draw()
 
 # region make checkboxes
 focused_make = None
@@ -54,6 +113,7 @@ def handle_make(label):
                 for i in reversed(indices):
                     del model_msk[i]
             focused_make = None
+            plot_graph()
     else:
         data = pd.read_csv('listings/' + label + '.csv')
         listings = pd.concat([listings, data], ignore_index=True)
@@ -72,7 +132,7 @@ model_check = None
 
 def handle_model(label):
     global model_msk
-    model_msk = [(not b if listings.at[i, 'model'] == label else b) for i, b in enumerate(model_msk)]
+    model_msk = [(not b if listings['model'].iat[i] == label else b) for i, b in enumerate(model_msk)]
     plot_graph()
 
 def plot_models():
@@ -84,6 +144,17 @@ def plot_models():
     plt.draw()
 
 # endregion
+
+# fuel type checkbox
+fuel_types = {'b': True, 'd': True}
+fuel_ax = fig.add_axes((V_OFFSET, 1-MK_HEIGHT-2*H_OFFSET, WDG_WIDTH, FL_HEIGHT))
+fuel_check = wdg.CheckButtons(fuel_ax, ['benzine', 'diesel'], fuel_types.values())
+
+def handle_fuel(label):
+    fuel_types[label[0]] = not fuel_types[label[0]]
+
+fuel_check.on_clicked(handle_fuel)
+fuel_check.on_clicked(plot_graph)
 
 # region sliders
 sliders = [
@@ -98,18 +169,21 @@ sliders = [
     },{
         'label': 'age (yr)',
         'min': 0, 'max': 25, 'init': 25,
-        'var': 'max_age'
+        'var': 'mac_vehicle_age'
     },{
         'label': 'distance (km)',
         'min': 0, 'max': 200, 'init': 200,
         'var': 'max_distance'
+    # },{
+    #     'label': 'listing age (days)',
+    #     'min': 0, 'max': 2000, 'init': 2000,
+    #     'var': 'max_listing_age'
     },
 ]
 
 def update(name):
     def callback(val):
         globals()[name] = val
-        globals()['plot_graph']()
     return callback
 
 for i, s in enumerate(sliders):
@@ -122,55 +196,8 @@ for i, s in enumerate(sliders):
         valinit=s['init']
     )
     s['slider'].on_changed(update(s['var']))
-    s['slider'].set_val(s['init'])
+    s['slider'].on_changed(plot_graph)
 # endregion
-
-# scatter graph
-scatter = None
-
-def reset_graph_ax():
-    print('reset_graph_ax')
-    graph_ax.clear()
-    graph_ax.set_xlim(0, lim_x)
-    graph_ax.set_ylim(0, lim_y)
-    graph_ax.grid(
-        visible=True, 
-        which='both'
-    )
-    graph_ax.set(
-        xlabel='mileage',
-        ylabel='price',
-        frame_on=True,
-    )
-
-def plot_graph():
-    reset_graph_ax()
-
-    if not listings.empty:
-        age_msk = [a < max_age * 365 for a in listings.get('reg-age')]
-        distance_msk = [d < max_distance for d in listings.get('distance')]
-
-        mask = reduce(np.logical_and, (age_msk, distance_msk, model_msk))
-
-        global graph_data
-        graph_data = listings[mask]
-
-        global scatter
-        scatter = graph_ax.scatter(
-            data=graph_data,
-            x='mileage',
-            y='price',
-            s='distance',
-            c='reg-age',
-            cmap='YlOrRd',
-            norm=Normalize(0, 25 * 365)
-        )
-
-        graph_ax.set_xlim(0, lim_x)
-        graph_ax.set_ylim(0, lim_y)
-
-    plt.draw()
-
 
 # region detail section
 detail_index = None
@@ -183,14 +210,14 @@ detail_text_ar = None
 detail_tmpl = '''
     make:       {make}              price:          {price}
 
-    model:      {model}
+    model:      {model}             fuel type:      {fuel-type}
 
-    year:       {year}              mileage:        {mileage} km
+    year:       {first-reg-date}    mileage:        {mileage} km
 
 
-    seller:             {seller-type}                   vehicle type:   {vehicle-type}
+    seller:             {seller-type}                  
 
-    listing age:        {listing-age} days                   fuel type:      {fuel-type}
+    listing age:        #listing-age# days
 
     distance:           {distance:.0f}
 '''
@@ -199,7 +226,9 @@ def draw_details():
     detail_listing = graph_data.iloc[detail_index]
 
     # image
-    res = requests.get(detail_listing.at['img-url'][:-13])
+    images = detail_listing.at['images']
+    img_url = images.split(' ')[0][:-13]
+    res = requests.get(img_url)
     img_data = Image.open(BytesIO(res.content))
     global img_ar
     img_ar = detail_img_ax.imshow(img_data)
@@ -228,4 +257,5 @@ def handle_focus(e):
 fig.canvas.mpl_connect('button_press_event', handle_focus)
 # endregion
 
+reset_graph_ax()
 plt.show()
