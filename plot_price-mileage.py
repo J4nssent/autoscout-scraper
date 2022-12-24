@@ -222,16 +222,30 @@ detail_tmpl = '''
     distance:           {distance:.0f}
 '''
 
+
+img_ar = None
+def draw_image(index=None):
+    images = detail_listing.at['images']
+
+    global img_index
+    if index is None:
+        img_index = (img_index + 1) % len(images)
+    else:
+        img_index = index
+
+    img_url = images.split(' ')[img_index][:-13]
+    res = requests.get(img_url)
+    img_data = Image.open(BytesIO(res.content))
+
+    global img_ar
+    img_ar = detail_img_ax.imshow(img_data)
+
 def draw_details():
+    global detail_listing
     detail_listing = graph_data.iloc[detail_index]
 
     # image
-    images = detail_listing.at['images']
-    img_url = images.split(' ')[0][:-13]
-    res = requests.get(img_url)
-    img_data = Image.open(BytesIO(res.content))
-    global img_ar
-    img_ar = detail_img_ax.imshow(img_data)
+    draw_image(0)
 
     # details
     global detail_text_ar
@@ -251,8 +265,12 @@ def handle_focus(e):
             detail_index = hit_info['ind'][0]  # returns index in df (not row label)
             draw_details()
         
-    if detail_index is not None and img_ar.contains(e)[0]:
+    if detail_index is not None and detail_text_ar.contains(e)[0]:
         webbrowser.open('https://www.autoscout24.be/nl/aanbod/' + graph_data.iloc[detail_index].at['guid'])
+    
+    if img_ar is not None and img_ar.contains(e)[0]:
+        draw_image()
+        plt.draw()
         
 fig.canvas.mpl_connect('button_press_event', handle_focus)
 # endregion

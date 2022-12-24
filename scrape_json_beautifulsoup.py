@@ -91,7 +91,7 @@ for brand in BRANDS:
         data_script = soup.find(id="__NEXT_DATA__")
 
         if data_script is None:
-            print('unable to get data')
+            print('\tunable to get data')
             break
 
         data_string = data_script.string
