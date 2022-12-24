@@ -12,8 +12,10 @@ from os import listdir
 
 
 # settings
-MAX_PRC = 6000
+MAX_PRC = 10000
+INIT_PRC = 7500
 MAX_MLG = 300000
+INIT_MLG = 200000
 
 # constants
 WIN_WIDTH, WIN_HEIGHT = 23, 9
@@ -37,7 +39,7 @@ detail_ax.axis('off')
 
 # scatter graph
 scatter = None
-lim_x, lim_y = MAX_MLG, MAX_PRC
+lim_x, lim_y = INIT_MLG, INIT_PRC
 mac_vehicle_age = 50
 max_distance = 200
 max_listing_age = 2000
@@ -160,11 +162,11 @@ fuel_check.on_clicked(plot_graph)
 sliders = [
     {
         'label': 'price',
-        'min': 0, 'max': 20000, 'init': MAX_PRC,
+        'min': 0, 'max': MAX_PRC, 'init': INIT_PRC,
         'var': 'lim_y'
     },{
         'label': 'mileage',
-        'min': 0, 'max': 500000, 'init': MAX_MLG,
+        'min': 0, 'max': MAX_MLG, 'init': INIT_MLG,
         'var': 'lim_x'
     },{
         'label': 'age (yr)',
