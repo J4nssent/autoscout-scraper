@@ -13,9 +13,11 @@ from os import listdir
 
 # settings
 MAX_PRC = 10000
-INIT_PRC = 7500
+INIT_PRC = 8000
 MAX_MLG = 300000
-INIT_MLG = 200000
+INIT_MLG = 150000
+MAX_AGE = 50
+INIT_AGE = 15
 
 # constants
 WIN_WIDTH, WIN_HEIGHT = 23, 9
@@ -144,7 +146,6 @@ def plot_models():
     model_check = wdg.CheckButtons(model_ax, models)
     model_check.on_clicked(handle_model)
     plt.draw()
-
 # endregion
 
 # fuel type checkbox
@@ -170,7 +171,7 @@ sliders = [
         'var': 'lim_x'
     },{
         'label': 'age (yr)',
-        'min': 0, 'max': 25, 'init': 25,
+        'min': 0, 'max': MAX_AGE, 'init': INIT_AGE,
         'var': 'mac_vehicle_age'
     },{
         'label': 'distance (km)',
@@ -266,7 +267,7 @@ def handle_focus(e):
             global detail_index
             detail_index = hit_info['ind'][0]  # returns index in df (not row label)
             draw_details()
-        
+    
     if detail_index is not None and detail_text_ar.contains(e)[0]:
         webbrowser.open('https://www.autoscout24.be/nl/aanbod/' + graph_data.iloc[detail_index].at['guid'])
     
