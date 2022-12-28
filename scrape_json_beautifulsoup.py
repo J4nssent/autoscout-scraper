@@ -29,9 +29,9 @@ today = date.today()
 # full json data for listings
 data = []
 
-# reduce json data to relevant data
+# reduce json data to dict of relevant data
 def handleListing(l):
-    # try:
+    try:
         # calculate distance
         listing_zip_code = l['location']['zip']
         dis = distance.query_postal_code(zip_code, listing_zip_code)
@@ -46,7 +46,7 @@ def handleListing(l):
             reg_age = (today - reg_date).days
 
         # listing age in days
-        # listing_date_str = l['createdTimestampWithOffset']
+        # listing_date_str = l['createdTimestampWithOffset'] # field removed from json data
         # year, month, day = listing_date_str[:10].rsplit('-')
         # listing_date = date(int(year), int(month), int(day))
         # listing_age = (today - listing_date).days
@@ -69,9 +69,10 @@ def handleListing(l):
             'reg-age': reg_age,
             # 'listing-age': listing_age
         }
-    # except:
-    #     return None
+    except:
+        return None
 
+# iterate brands
 for brand in BRANDS:
     print("scraping {} listings".format(brand))
 
@@ -88,6 +89,7 @@ for brand in BRANDS:
         html = requests.get(page_url)
         soup = BeautifulSoup(html.content, 'html.parser')
 
+        # JSON script of listings data
         data_script = soup.find(id="__NEXT_DATA__")
 
         if data_script is None:
@@ -122,13 +124,3 @@ for brand in BRANDS:
     print("\tsaving listings")
     df = pd.DataFrame(formatted) 
     df.to_csv("listings/" + brand + ".csv", index=False, encoding='utf-8')
-
-# # store as CSV
-# fn = "".join(brands)
-# df = pd.DataFrame(formatted) 
-# df.to_csv("csv/" + fn + ".csv", index=False, encoding='utf-8')
-
-# store JSON data
-# file_name = query.replace('/', '').replace('?', '') + '.json'
-# file = open("json/" + file_name, 'a')
-# file.write(json.dumps(data))
