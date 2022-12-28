@@ -78,8 +78,8 @@ for brand in BRANDS:
     brand_listings = []
 
     # brand results url
-    brand_query = brand.lower().replace(' ','-')
-    url = base_url + query.format(brand_query, MAX_PRICE)
+    brand_string = brand.lower().replace(' ','-')
+    url = base_url + query.format(brand_string, MAX_PRICE)
 
     # iterate pages
     page = 1
@@ -102,7 +102,7 @@ for brand in BRANDS:
         if page == 20:
             if len(page_listings) == 20:
                 price = page_listings[19]['tracking']['price']
-                url = base_url + query.format(brand_query, MAX_PRICE) + "&pricefrom=" + str(price)
+                url = base_url + query.format(brand_string, MAX_PRICE) + "&pricefrom=" + str(price)
                 page = 0
                 
                 print('\treached end of results, setting new min price to', price)
