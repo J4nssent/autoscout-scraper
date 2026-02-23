@@ -12,12 +12,16 @@ from os import listdir
 
 
 # settings
-MAX_PRC = 10000
-INIT_PRC = 8000
-MAX_MLG = 300000
-INIT_MLG = 150000
-MAX_AGE = 50
-INIT_AGE = 15
+MIN_PRC = 10000
+MAX_PRC = 30000
+INIT_PRC = 30000
+MAX_MLG = 200000
+INIT_MLG = 100000
+MAX_AGE = 15
+INIT_AGE = 12
+MAX_DIST = 400
+INIT_DIST = 150
+DEFAULT_CHECKED = True
 
 # constants
 WIN_WIDTH, WIN_HEIGHT = 23, 9
@@ -42,14 +46,12 @@ detail_ax.axis('off')
 # scatter graph
 scatter = None
 lim_x, lim_y = INIT_MLG, INIT_PRC
-mac_vehicle_age = 50
-max_distance = 200
-max_listing_age = 2000
+max_vehicle_age, max_distance = INIT_AGE, INIT_DIST
 
 def reset_graph_ax():
     graph_ax.clear()
     graph_ax.set_xlim(0, lim_x)
-    graph_ax.set_ylim(0, lim_y)
+    graph_ax.set_ylim(MIN_PRC, lim_y)
     graph_ax.grid(
         visible=True, 
         which='both'
@@ -61,40 +63,46 @@ def reset_graph_ax():
     )
 
 def plot_graph(_=None):
-    reset_graph_ax()
+    global graph_data, scatter
 
-    if not listings.empty:
-        age_msk = [a < mac_vehicle_age * 365 for a in listings.get('reg-age')]
-        distance_msk = [d < max_distance for d in listings.get('distance')]
-        # listing_mask = [a < max_listing_age for a in listings.get('listing-age')]
-        fuel_mask = [(fuel_types.get(t) if fuel_types.get(t) is not None else False) for t in listings.get('fuel-type')]
-
-        mask = reduce(np.logical_and, (
-            age_msk, 
-            distance_msk, 
-            # listing_mask, 
-            fuel_mask, 
-            model_msk)
-        )
-
-        global graph_data
-        graph_data = listings[mask]
-
-        global scatter
-        scatter = graph_ax.scatter(
-            data=graph_data,
-            x='mileage',
-            y='price',
-            s='distance',
-            c='reg-age',
-            cmap='YlOrRd',
-            norm=Normalize(0, 25 * 365)
-        )
-
+    if listings.empty:
+        # clear scatter (keep artist)
+        scatter.set_offsets(np.empty((0, 2)))
+        scatter.set_sizes(np.array([]))
+        scatter.set_array(np.array([]))
         graph_ax.set_xlim(0, lim_x)
-        graph_ax.set_ylim(0, lim_y)
+        graph_ax.set_ylim(MIN_PRC, lim_y)
+        fig.canvas.draw_idle()
+        return
 
-    plt.draw()
+    # --- vectorized masks ---
+    age_msk = (listings['reg-age'].to_numpy() < (max_vehicle_age * 365))
+    distance_msk = (listings['distance'].to_numpy() < max_distance)
+
+    # map fuel types using current checkbox dict
+    # fuel_msk = listings['fuel-type'].map(lambda t: fuel_types.get(t, False)).to_numpy(dtype=bool)
+
+    model_msk_np = np.asarray(model_msk, dtype=bool)
+
+    mask = age_msk & distance_msk & model_msk_np # & fuel_msk
+
+    graph_data = listings.loc[mask]
+
+    # --- update scatter in place ---
+    x = graph_data['mileage'].to_numpy()
+    y = graph_data['price'].to_numpy()
+    offsets = np.column_stack((x, y))
+    scatter.set_offsets(offsets)
+
+    # sizes and colors
+    scatter.set_sizes(graph_data['distance'].to_numpy())     # s expects points^2; scale if needed
+    scatter.set_array(graph_data['reg-age'].to_numpy())      # drives colormap
+
+    # axes limits (no clear)
+    graph_ax.set_xlim(0, lim_x)
+    graph_ax.set_ylim(MIN_PRC, lim_y)
+
+    fig.canvas.draw_idle()
 
 # region make checkboxes
 focused_make = None
@@ -121,7 +129,7 @@ def handle_make(label):
     else:
         data = pd.read_csv('listings/' + label + '.csv')
         listings = pd.concat([listings, data], ignore_index=True)
-        model_msk.extend([False] * len(data.index))
+        model_msk.extend([DEFAULT_CHECKED] * len(data.index))
         
     focused_make = label
     plot_models()
@@ -143,21 +151,23 @@ def plot_models():
     model_ax.clear()
     models = sorted(map(str, listings[listings.make == focused_make].model.unique()))
     global model_check
-    model_check = wdg.CheckButtons(model_ax, models)
+    model_check = wdg.CheckButtons(model_ax, models, [DEFAULT_CHECKED] * len(models))
+    if DEFAULT_CHECKED:
+        plot_graph()
     model_check.on_clicked(handle_model)
     plt.draw()
 # endregion
 
 # fuel type checkbox
-fuel_types = {'b': True, 'd': True}
-fuel_ax = fig.add_axes((V_OFFSET, 1-MK_HEIGHT-2*H_OFFSET, WDG_WIDTH, FL_HEIGHT))
-fuel_check = wdg.CheckButtons(fuel_ax, ['benzine', 'diesel'], fuel_types.values())
+# fuel_types = {'b': True, 'd': True}
+# fuel_ax = fig.add_axes((V_OFFSET, 1-MK_HEIGHT-2*H_OFFSET, WDG_WIDTH, FL_HEIGHT))
+# fuel_check = wdg.CheckButtons(fuel_ax, ['benzine', 'diesel'], fuel_types.values())
 
-def handle_fuel(label):
-    fuel_types[label[0]] = not fuel_types[label[0]]
+# def handle_fuel(label):
+#     fuel_types[label[0]] = not fuel_types[label[0]]
 
-fuel_check.on_clicked(handle_fuel)
-fuel_check.on_clicked(plot_graph)
+# fuel_check.on_clicked(handle_fuel)
+# fuel_check.on_clicked(plot_graph)
 
 # region sliders
 sliders = [
@@ -172,10 +182,10 @@ sliders = [
     },{
         'label': 'age (yr)',
         'min': 0, 'max': MAX_AGE, 'init': INIT_AGE,
-        'var': 'mac_vehicle_age'
+        'var': 'max_vehicle_age'
     },{
         'label': 'distance (km)',
-        'min': 0, 'max': 200, 'init': 200,
+        'min': 0, 'max': MAX_DIST, 'init': INIT_DIST,
         'var': 'max_distance'
     # },{
     #     'label': 'listing age (days)',
@@ -279,4 +289,16 @@ fig.canvas.mpl_connect('button_press_event', handle_focus)
 # endregion
 
 reset_graph_ax()
+graph_ax.grid(True, which='both')
+graph_ax.set_xlabel('mileage')
+graph_ax.set_ylabel('price')
+
+scatter = graph_ax.scatter(
+    [], [],                 # empty data
+    s=[],                   # sizes
+    c=[],                   # colors
+    cmap='YlOrRd',
+    norm=Normalize(0, MAX_AGE * 365)
+)
+
 plt.show()

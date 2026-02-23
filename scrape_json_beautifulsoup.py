@@ -6,16 +6,63 @@ from datetime import date
 import pgeocode
 import csv
 
-MAX_PRICE = 10000
+MAX_PRICE = 30000
+MAX_DISTANCE = 150
+FIRST_REG_DATE = 2020
 
 BRANDS = [
-    'Mercedes-Benz', 'BMW', 'Toyota', 'Volkswagen', 'Audi',
-    'Renault', 'Subaru', 'Nissan', 'Porsche', 'Volvo', 'Land Rover', 'Mazda',
-    'Mitsubishi', 'Alfa Romeo', 'Lexus', 'Skoda', 'Honda'
+    'BMW', 
+    # 'Mercedes-Benz', 
+    'Toyota', 
+    'Volkswagen', 
+    # 'Audi',
+    # 'Renault', 
+    # 'Subaru', 
+    'Nissan', 
+    # 'Porsche', 
+    'Volvo', 
+    # 'Land Rover', 
+    'Mazda',
+    'Mitsubishi', 
+    # 'Alfa Romeo', 
+    # 'Lexus', 
+    'Skoda', 
+    # 'Honda',
+    # 'Opel',
+    'Kia',
+    # 'Suzuki',
+    'Hyundai',
+    # 'Ford',
+    # 'Fiat'
 ]
 
-# url of search results
-query = "lst/{}?sort=price&asc=0&ustate=N,U&atype=C&cy=B&priceto={}"
+# build autoscout search url
+base_query = "lst/{}?"
+
+params = {
+    "zip": "2910%20Essen",
+    "zipr": MAX_DISTANCE,
+    "priceto": MAX_PRICE,
+    "fregfrom": FIRST_REG_DATE,
+
+    "ustate": "N%2CU",
+    "atype": "C",
+    "body": "4%2C5%2C1",
+    "damaged_listing": "exclude",
+    "fuel": "2%2CB",
+    "gear": "A",
+
+    "sort": "price",
+    "asc": 0
+}
+
+def build_query(brand: str):
+    query_parts = []
+    for key, value in params.items():
+        if value != -1:
+            query_parts.append(f"{key}={value}")
+    return base_query.format(brand) + "&".join(query_parts)
+
 
 base_url = 'https://www.autoscout24.be/nl/'
 
@@ -60,7 +107,7 @@ def handleListing(l):
             'seller-type': l['seller']['type'],
             'price': l['tracking']['price'],
             'fuel-type': l['tracking']['fuelType'],
-            'mileage': l['tracking']['mileage'],
+            'mileage': int(l['tracking']['mileage']),
             'first-reg-date': l['tracking']['firstRegistration'],
             # 'listing-date': l['createdTimestampWithOffset'],
             'zip-code': l['location']['zip'],   
@@ -80,7 +127,7 @@ for brand in BRANDS:
 
     # brand results url
     brand_string = brand.lower().replace(' ','-')
-    url = base_url + query.format(brand_string, MAX_PRICE)
+    url = base_url + build_query(brand_string)
 
     # iterate pages
     page = 1
@@ -93,23 +140,24 @@ for brand in BRANDS:
         data_script = soup.find(id="__NEXT_DATA__")
 
         if data_script is None:
-            print('\tunable to get data')
+            print('\tunable to get data:', page_url)
             break
 
         data_string = data_script.string
         page_data = json.loads(data_string)
         page_listings = page_data['props']['pageProps']['listings']
 
+        # page limit has been removed
         # if max page count is reached, start over with current price as minimum
-        if page == 20:
-            if len(page_listings) == 20:
-                price = page_listings[19]['tracking']['price']
-                url = base_url + query.format(brand_string, MAX_PRICE) + "&pricefrom=" + str(price)
-                page = 0
+        # if page == 20:
+        #     if len(page_listings) == 20:
+        #         price = page_listings[19]['tracking']['price']
+        #         url = base_url + build_query(brand_string) + f"&pricefrom={price}"
+        #         page = 0
                 
-                print('\treached end of results, setting new min price to', price)
-            else:
-                break
+        #         print('\treached end of results, setting new min price to', price)
+        #     else:
+        #         break
 
         page += 1
 
@@ -124,3 +172,5 @@ for brand in BRANDS:
     print("\tsaving listings")
     df = pd.DataFrame(formatted) 
     df.to_csv("listings/" + brand + ".csv", index=False, encoding='utf-8')
+
+print("finished scraping all brands")
