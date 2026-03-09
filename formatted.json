@@ -1,0 +1,135 @@
+{
+  "id": "90843cf6-f601-47b4-97b3-30fec354b011",
+  "evBanner": {
+    "type": "hybrid",
+    "label": "Hybride"
+  },
+  "identifier": {
+    "legacyId": null,
+    "crossReferenceId": null
+  },
+  "images": [
+    "https://prod.pictures.autoscout24.net/listing-images/90843cf6-f601-47b4-97b3-30fec354b011_7800f928-5bd2-4fe8-ba8c-392b42389688.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/90843cf6-f601-47b4-97b3-30fec354b011_89e64f09-64c7-44f0-843c-81fd17f1f382.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/90843cf6-f601-47b4-97b3-30fec354b011_71697e19-7e5f-4181-9303-248f7b7f8267.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/90843cf6-f601-47b4-97b3-30fec354b011_91e57194-062f-42ac-be26-431b1e0bdf3c.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/90843cf6-f601-47b4-97b3-30fec354b011_df1717f2-afa0-4183-906f-c34bd1466fb8.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/90843cf6-f601-47b4-97b3-30fec354b011_b7b3447c-b588-48a2-b882-9408e361f2b8.jpg/250x188.webp"
+  ],
+  "ocsImagesA": [],
+  "price": {
+    "priceFormatted": "€ 50.000",
+    "priceEvaluation": 2,
+    "isVatLabelLegallyRequired": false,
+    "isPriceEvaluationEnabled": true
+  },
+  "availableNow": true,
+  "superDeal": {
+    "oldPriceFormatted": "",
+    "isEligible": false
+  },
+  "url": "/nl/aanbod/bmw-x3-phev-2-0ias-xdrive30e-215-kw-elektrisch-benzine-zwart-90843cf6-f601-47b4-97b3-30fec354b011",
+  "vehicle": {
+    "articleType": "Car",
+    "type": "Car",
+    "make": "BMW",
+    "model": "X3",
+    "modelGroup": "X3",
+    "variant": "X3",
+    "modelId": 18387,
+    "modelVersionInput": "PHEV 2.0iAS xDrive30e (215 kW)",
+    "subtitle": null,
+    "offerType": "U",
+    "transmission": "Automatisch",
+    "fuel": "Elektrisch/Benzine",
+    "mileageInKm": "24.000 km"
+  },
+  "location": {
+    "countryCode": "BE",
+    "zip": "7332",
+    "city": "Neufmaison ",
+    "distanceToSearchLocationInKm": 114
+  },
+  "seller": {
+    "dealer": {},
+    "id": "32558702",
+    "type": "PrivateSeller",
+    "links": {
+      "infoPage": "/lst?atype=C&cid=32558702"
+    },
+    "phones": [
+      {
+        "phoneType": "Private",
+        "formattedNumber": "+32 (0)494 - 543393",
+        "callTo": "+32494543393"
+      }
+    ]
+  },
+  "appliedAdTier": "T10",
+  "adTier": "T10",
+  "isOcs": false,
+  "specialConditions": [],
+  "statistics": {
+    "leadsRange": "Some"
+  },
+  "searchResultType": "Organic",
+  "searchResultSection": "Main",
+  "tracking": {
+    "firstRegistration": "05-2024",
+    "fuelType": "2",
+    "imageContent": "no-placeholder|0.2203328014961622",
+    "isSmyleEligible": "true",
+    "mileage": "24000",
+    "priceLabel": "good-price",
+    "price": "50000",
+    "orderBucket": "unknown",
+    "modelTaxonomy": "[make_id:13, model_group_id:18387, variant_id:3241, generation_id:63, motortype_id:340, trim_id:];"
+  },
+  "coverImageAttractiveness": 0.2203328014961622,
+  "vehicleDetails": [
+    {
+      "data": "24.000 km",
+      "iconName": "mileage_odometer",
+      "ariaLabel": "Kilometerstand"
+    },
+    {
+      "data": "Automatisch",
+      "iconName": "gearbox",
+      "ariaLabel": "Transmissie"
+    },
+    {
+      "data": "05/2024",
+      "iconName": "calendar",
+      "ariaLabel": "Eerste inschrijving"
+    },
+    {
+      "data": "Elektrisch/Benzine",
+      "iconName": "gas_pump",
+      "ariaLabel": "Brandstof"
+    },
+    {
+      "data": "135 kW (184 PK)",
+      "iconName": "speedometer",
+      "ariaLabel": "Vermogen"
+    }
+  ],
+  "wltpValues": [],
+  "trackingParameters": [
+    {
+      "key": "boost_level",
+      "value": "t10"
+    },
+    {
+      "key": "applied_boost_level",
+      "value": "t10"
+    },
+    {
+      "key": "relevance_adjustment",
+      "value": "organic"
+    },
+    {
+      "key": "boosting_product",
+      "value": "none"
+    }
+  ]
+}
