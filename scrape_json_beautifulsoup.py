@@ -3,35 +3,39 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from datetime import date
+import time
 import pgeocode
 import csv
+import os
 
-MAX_PRICE = 30000
+MAX_PRICE = 50000
 MAX_DISTANCE = 150
-FIRST_REG_DATE = 2020
+FIRST_REG_DATE = 1965
+
+BODY_TYPES = list(range(1, 15))  # 1 to 14
 
 BRANDS = [
     'BMW', 
     # 'Mercedes-Benz', 
-    'Toyota', 
-    'Volkswagen', 
+    # 'Toyota', 
+    # 'Volkswagen', 
     # 'Audi',
-    # 'Renault', 
     # 'Subaru', 
-    'Nissan', 
+    # 'Nissan', 
     # 'Porsche', 
-    'Volvo', 
+    # 'Volvo', 
+    # 'Renault', 
     # 'Land Rover', 
-    'Mazda',
-    'Mitsubishi', 
+    # 'Mazda',
+    # 'Mitsubishi', 
     # 'Alfa Romeo', 
     # 'Lexus', 
-    'Skoda', 
+    # 'Skoda', 
     # 'Honda',
     # 'Opel',
-    'Kia',
+    # 'Kia',
     # 'Suzuki',
-    'Hyundai',
+    # 'Hyundai',
     # 'Ford',
     # 'Fiat'
 ]
@@ -47,20 +51,22 @@ params = {
 
     "ustate": "N%2CU",
     "atype": "C",
-    "body": "4%2C5%2C1",
+    # "body": "4%2C5%2C1",  # Will be set per body type
     "damaged_listing": "exclude",
-    "fuel": "2%2CB",
-    "gear": "A",
+    # "fuel": "2%2CB",
+    # "gear": "A",
 
     "sort": "price",
     "asc": 0
 }
 
-def build_query(brand: str):
+def build_query(brand: str, body_type: int = None):
     query_parts = []
     for key, value in params.items():
         if value != -1:
             query_parts.append(f"{key}={value}")
+    if body_type is not None:
+        query_parts.append(f"body={body_type}")
     return base_query.format(brand) + "&".join(query_parts)
 
 
@@ -77,7 +83,7 @@ today = date.today()
 data = []
 
 # reduce json data to dict of relevant data
-def handleListing(l):
+def handleListing(l, body_type):
     try:
         # calculate distance
         listing_zip_code = l['location']['zip']
@@ -104,73 +110,96 @@ def handleListing(l):
             'make': l['vehicle']['make'],
             'model': l['vehicle']['model'],
             'version': l['vehicle']['modelVersionInput'],
+            'transmission': l['vehicle']['transmission'],
+            'fuel': l['vehicle']['fuel'],
             'seller-type': l['seller']['type'],
             'price': l['tracking']['price'],
-            'fuel-type': l['tracking']['fuelType'],
+            # 'fuel-type': l['tracking']['fuelType'],
             'mileage': int(l['tracking']['mileage']),
             'first-reg-date': l['tracking']['firstRegistration'],
             # 'listing-date': l['createdTimestampWithOffset'],
             'zip-code': l['location']['zip'],   
             'images': ' '.join(l['images']),
-            'distance': dis,
+            'distance': int(dis),
             'reg-age': reg_age,
             # 'listing-age': listing_age
+            'body-type': body_type
         }
     except:
         return None
 
 # iterate brands
 for brand in BRANDS:
-    print("scraping {} listings".format(brand))
+    print("Collecting {} listings:".format(brand))
 
-    brand_listings = []
+    brand_formatted_listings = []
 
     # brand results url
     brand_string = brand.lower().replace(' ','-')
-    url = base_url + build_query(brand_string)
 
-    # iterate pages
-    page = 1
-    while True:
-        page_url = url + "&page=" + str(page)
-        html = requests.get(page_url)
-        soup = BeautifulSoup(html.content, 'html.parser')
+    # iterate body types
+    for body_type in BODY_TYPES:
+        print("\tSearching for body type {}".format(body_type))
+        url = base_url + build_query(brand_string, body_type)
 
-        # JSON script of listings data
-        data_script = soup.find(id="__NEXT_DATA__")
+        # iterate pages
+        page = 1
+        tries = 0
+        while True:
+            page_url = url + "&page=" + str(page)
+            html = requests.get(page_url)
+            soup = BeautifulSoup(html.content, 'html.parser')
 
-        if data_script is None:
-            print('\tunable to get data:', page_url)
-            break
+            # JSON script of listings data
+            data_script = soup.find(id="__NEXT_DATA__")
 
-        data_string = data_script.string
-        page_data = json.loads(data_string)
-        page_listings = page_data['props']['pageProps']['listings']
+            if data_script is None:
+                print('\t\tUnable to get data:', page_url)
+                if tries > 3:
+                    print('\t\tFailed to get data after 3 tries, aborting')
+                    break
 
-        # page limit has been removed
-        # if max page count is reached, start over with current price as minimum
-        # if page == 20:
-        #     if len(page_listings) == 20:
-        #         price = page_listings[19]['tracking']['price']
-        #         url = base_url + build_query(brand_string) + f"&pricefrom={price}"
-        #         page = 0
-                
-        #         print('\treached end of results, setting new min price to', price)
-        #     else:
-        #         break
+                print('\t\tWaiting 5 seconds and trying page again...')
+                time.sleep(5)
+                tries += 1
+                continue
 
-        page += 1
+            data_string = data_script.string
+            page_data = json.loads(data_string)
+            page_listings = page_data['props']['pageProps']['listings']
+            
+            # Reset tries counter after successful request
+            tries = 0
 
-        if page_listings:
-            brand_listings.extend(page_listings)
-        else:
-            break
+            # page limit has been removed
+            # if max page count is reached, start over with current price as minimum
+            # if page == 20:
+            #     if len(page_listings) == 20:
+            #         price = page_listings[19]['tracking']['price']
+            #         url = base_url + build_query(brand_string) + f"&pricefrom={price}"
+            #         page = 0
+                    
+            #         print('\treached end of results, setting new min price to', price)
+            #     else:
+            #         break
+
+            page += 1
+
+            if page_listings:
+                # Format listings with current body_type immediately
+                formatted_page = [x for x in map(lambda l: handleListing(l, body_type), page_listings) if x is not None]
+                brand_formatted_listings.extend(formatted_page)
+            else:
+                break
 
     # save brand listings
-    formatted = [x for x in map(handleListing, brand_listings) if x is not None]
-    print("\tconverted {} out of {} listings".format(len(formatted), len(brand_listings)))
-    print("\tsaving listings")
-    df = pd.DataFrame(formatted) 
-    df.to_csv("listings/" + brand + ".csv", index=False, encoding='utf-8')
+    formatted = brand_formatted_listings
+    print("\tCollected {} listings".format(len(formatted)))
 
-print("finished scraping all brands")
+    print("\tSaving listings")
+    os.makedirs("AutoScrape24/src/data", exist_ok=True)
+    out_path = os.path.join("AutoScrape24/src/data", f"{brand}.json")
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(formatted, f, ensure_ascii=False, indent=2)
+
+print("Finished saving all brands")
