@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const BODY_TYPE_LABELS = {
   1: 'Compact',
@@ -16,7 +16,13 @@ function Filters({ value = {}, bounds = {}, onChange }) {
   const [inputSearch, setInputSearch] = useState('');
   const [searchKeywords, setSearchKeywords] = useState(value.searchKeywords || []);
   const [maxPrice, setMaxPrice] = useState(value.maxPrice ?? 25000);
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [priceInputValue, setPriceInputValue] = useState(String(value.maxPrice ?? 25000));
+  const priceInputRef = useRef(null);
   const [maxMileage, setMaxMileage] = useState(value.maxMileage ?? 100000);
+  const [isEditingMileage, setIsEditingMileage] = useState(false);
+  const [mileageInputValue, setMileageInputValue] = useState(String(value.maxMileage ?? 100000));
+  const mileageInputRef = useRef(null);
   const [ageRange, setAgeRange] = useState(value.ageRange || [0, 30]);
   const [fuelTypes, setFuelTypes] = useState(value.fuelTypes || {
     gasoline: false,
@@ -61,27 +67,41 @@ function Filters({ value = {}, bounds = {}, onChange }) {
     status: false,
   });
 
-  const maxPriceLimit = Math.max(0, Number(bounds.maxPrice ?? 100000));
-  const maxMileageLimit = Math.max(0, Number(bounds.maxMileage ?? 300000));
+  const maxPriceLimit = 100000;
+  const maxMileageLimit = 300000;
   const maxDistanceLimit = Math.max(0, Number(bounds.maxDistance ?? 500));
-
-  useEffect(() => {
-    if (maxPrice > maxPriceLimit) {
-      setMaxPrice(maxPriceLimit);
-    }
-  }, [maxPrice, maxPriceLimit]);
-
-  useEffect(() => {
-    if (maxMileage > maxMileageLimit) {
-      setMaxMileage(maxMileageLimit);
-    }
-  }, [maxMileage, maxMileageLimit]);
 
   useEffect(() => {
     if (maxDistance > maxDistanceLimit) {
       setMaxDistance(maxDistanceLimit);
     }
   }, [maxDistance, maxDistanceLimit]);
+
+  useEffect(() => {
+    if (!isEditingMileage) {
+      setMileageInputValue(String(maxMileage));
+    }
+  }, [isEditingMileage, maxMileage]);
+
+  useEffect(() => {
+    if (!isEditingPrice) {
+      setPriceInputValue(String(maxPrice));
+    }
+  }, [isEditingPrice, maxPrice]);
+
+  useEffect(() => {
+    if (isEditingMileage && mileageInputRef.current) {
+      mileageInputRef.current.focus();
+      mileageInputRef.current.select();
+    }
+  }, [isEditingMileage]);
+
+  useEffect(() => {
+    if (isEditingPrice && priceInputRef.current) {
+      priceInputRef.current.focus();
+      priceInputRef.current.select();
+    }
+  }, [isEditingPrice]);
 
   useEffect(() => {
     if (onChange) {
@@ -119,6 +139,56 @@ function Filters({ value = {}, bounds = {}, onChange }) {
   };
   const toggleAgeMode = () => {
     setAgeMode((prev) => (prev === 'age' ? 'year' : 'age'));
+  };
+
+  const startMileageEdit = () => {
+    setMileageInputValue(String(maxMileage));
+    setIsEditingMileage(true);
+  };
+
+  const commitMileageEdit = () => {
+    const trimmedValue = mileageInputValue.trim();
+    if (trimmedValue === '') {
+      setMileageInputValue(String(maxMileage));
+      setIsEditingMileage(false);
+      return;
+    }
+
+    const parsedValue = Number(trimmedValue);
+    if (!Number.isNaN(parsedValue)) {
+      setMaxMileage(Math.max(0, parsedValue));
+    }
+    setIsEditingMileage(false);
+  };
+
+  const cancelMileageEdit = () => {
+    setMileageInputValue(String(maxMileage));
+    setIsEditingMileage(false);
+  };
+
+  const startPriceEdit = () => {
+    setPriceInputValue(String(maxPrice));
+    setIsEditingPrice(true);
+  };
+
+  const commitPriceEdit = () => {
+    const trimmedValue = priceInputValue.trim();
+    if (trimmedValue === '') {
+      setPriceInputValue(String(maxPrice));
+      setIsEditingPrice(false);
+      return;
+    }
+
+    const parsedValue = Number(trimmedValue);
+    if (!Number.isNaN(parsedValue)) {
+      setMaxPrice(Math.max(0, parsedValue));
+    }
+    setIsEditingPrice(false);
+  };
+
+  const cancelPriceEdit = () => {
+    setPriceInputValue(String(maxPrice));
+    setIsEditingPrice(false);
   };
   
   // Get display values (convert age to year if in year mode)
@@ -224,14 +294,40 @@ function Filters({ value = {}, bounds = {}, onChange }) {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
           <label style={{ fontSize: '12px' }}>Price</label>
-          <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: '500' }}>€{maxPrice}</span>
+          {isEditingPrice ? (
+            <input
+              ref={priceInputRef}
+              type="number"
+              min="0"
+              className="mileage-inline-input"
+              value={priceInputValue}
+              onChange={(e) => setPriceInputValue(e.target.value)}
+              onBlur={commitPriceEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  commitPriceEdit();
+                }
+                if (e.key === 'Escape') {
+                  cancelPriceEdit();
+                }
+              }}
+              style={{ fontSize: '11px', color: '#6b7280', fontWeight: '500', width: '72px', textAlign: 'right', padding: '2px 4px' }}
+            />
+          ) : (
+            <span
+              onClick={startPriceEdit}
+              style={{ fontSize: '11px', color: '#6b7280', fontWeight: '500', cursor: 'text' }}
+            >
+              €{maxPrice}
+            </span>
+          )}
         </div>
         <input
           type="range"
           min="0"
           max={maxPriceLimit}
           step="500"
-          value={maxPrice}
+          value={Math.min(maxPrice, maxPriceLimit)}
           onChange={(e) => setMaxPrice(+e.target.value)}
         />
       </div>
@@ -239,14 +335,40 @@ function Filters({ value = {}, bounds = {}, onChange }) {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
           <label style={{ fontSize: '12px' }}>Mileage</label>
-          <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: '500' }}>{maxMileage} km</span>
+          {isEditingMileage ? (
+            <input
+              ref={mileageInputRef}
+              type="number"
+              min="0"
+              className="mileage-inline-input"
+              value={mileageInputValue}
+              onChange={(e) => setMileageInputValue(e.target.value)}
+              onBlur={commitMileageEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  commitMileageEdit();
+                }
+                if (e.key === 'Escape') {
+                  cancelMileageEdit();
+                }
+              }}
+              style={{ fontSize: '11px', color: '#6b7280', fontWeight: '500', width: '72px', textAlign: 'right', padding: '2px 4px' }}
+            />
+          ) : (
+            <span
+              onClick={startMileageEdit}
+              style={{ fontSize: '11px', color: '#6b7280', fontWeight: '500', cursor: 'text' }}
+            >
+              {maxMileage} km
+            </span>
+          )}
         </div>
         <input
           type="range"
           min="0"
           max={maxMileageLimit}
           step="1000"
-          value={maxMileage}
+          value={Math.min(maxMileage, maxMileageLimit)}
           onChange={(e) => setMaxMileage(+e.target.value)}
         />
       </div>

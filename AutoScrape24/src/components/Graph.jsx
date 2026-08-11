@@ -12,6 +12,7 @@ function Graph({ selection, filters, enabledMakes, listingStatuses, onSelect, on
   const svgRef = useRef(null);
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
+  const [axisResetVersion, setAxisResetVersion] = useState(0);
   const domainRef = useRef(null); // persist zoom domains across renders
   const svgElementsRef = useRef(null); // persist SVG structure
   const currentDataRef = useRef([]); // track current data for click detection
@@ -251,6 +252,11 @@ function Graph({ selection, filters, enabledMakes, listingStatuses, onSelect, on
         return [d0 + shift, d1 + shift];
       };
 
+      const getZoomFactor = (deltaY) => {
+        const ZOOM_SENSITIVITY = 0.005;
+        return Math.exp(deltaY * ZOOM_SENSITIVITY);
+      };
+
       const createScales = () => {
         const x = d3.scaleLinear().domain(domainRef.current.x).range([0, plotRight]);
         const y = d3.scaleLinear().domain(domainRef.current.y).range([h, plotTop]);
@@ -431,7 +437,7 @@ function Graph({ selection, filters, enabledMakes, listingStatuses, onSelect, on
         const { x: xScale, y: yScale } = createScales();
         const mxData = xScale.invert(mx);
         const myData = yScale.invert(my);
-        const wheel = event.deltaY < 0 ? 0.9 : 1.1;
+        const wheel = getZoomFactor(event.deltaY);
         // update domains
         domainRef.current.x = [
           mxData + (domainRef.current.x[0] - mxData) * wheel,
@@ -452,7 +458,7 @@ function Graph({ selection, filters, enabledMakes, listingStatuses, onSelect, on
         const [mx] = d3.pointer(event, g.node());
         const { x: xScale } = createScales();
         const mxData = xScale.invert(mx);
-        const wheel = event.deltaY < 0 ? 0.9 : 1.1;
+        const wheel = getZoomFactor(event.deltaY);
         domainRef.current.x = [
           mxData + (domainRef.current.x[0] - mxData) * wheel,
           mxData + (domainRef.current.x[1] - mxData) * wheel
@@ -467,7 +473,7 @@ function Graph({ selection, filters, enabledMakes, listingStatuses, onSelect, on
         const [, my] = d3.pointer(event, g.node());
         const { y: yScale } = createScales();
         const myData = yScale.invert(my);
-        const wheel = event.deltaY < 0 ? 0.9 : 1.1;
+        const wheel = getZoomFactor(event.deltaY);
         domainRef.current.y = [
           myData + (domainRef.current.y[0] - myData) * wheel,
           myData + (domainRef.current.y[1] - myData) * wheel
@@ -583,7 +589,7 @@ function Graph({ selection, filters, enabledMakes, listingStatuses, onSelect, on
     return () => {
       cleanupFns.forEach(fn => fn());
     };
-  }, [width, height, selection, filters, enabledMakes, listingStatuses]);
+  }, [width, height, selection, filters, enabledMakes, listingStatuses, axisResetVersion]);
 
   useEffect(() => {
     // use ResizeObserver to watch container size (reacts to divider drags too)
@@ -605,7 +611,24 @@ function Graph({ selection, filters, enabledMakes, listingStatuses, onSelect, on
   }, []);
 
   return (
-    <div ref={containerRef} className="graph-canvas">
+    <div ref={containerRef} className="graph-canvas" style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => {
+          domainRef.current = null;
+          setAxisResetVersion((prev) => prev + 1);
+        }}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          zIndex: 10,
+          fontSize: '11px',
+          padding: '4px 8px'
+        }}
+      >
+        Reset axis
+      </button>
       <svg ref={svgRef} className="graph-svg" style={{ width: '100%', height: '100%' }} />
     </div>
   );
