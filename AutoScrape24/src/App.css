@@ -454,6 +454,17 @@ input[type="range"]::-moz-range-thumb:hover {
   box-shadow: var(--shadow-md);
 }
 
+.mileage-inline-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.mileage-inline-input::-webkit-outer-spin-button,
+.mileage-inline-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* Labels */
 label {
   font-size: 13px;

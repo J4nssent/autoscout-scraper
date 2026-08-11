@@ -197,8 +197,8 @@ for brand in BRANDS:
     print("\tCollected {} listings".format(len(formatted)))
 
     print("\tSaving listings")
-    os.makedirs("AutoScrape24/src/data", exist_ok=True)
-    out_path = os.path.join("AutoScrape24/src/data", f"{brand}.json")
+    os.makedirs("AutoScrape24/public/data", exist_ok=True)
+    out_path = os.path.join("AutoScrape24/public/data", f"{brand}.json")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(formatted, f, ensure_ascii=False, indent=2)
 
