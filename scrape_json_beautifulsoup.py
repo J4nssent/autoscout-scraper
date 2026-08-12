@@ -15,7 +15,7 @@ FIRST_REG_DATE = 1965
 BODY_TYPES = list(range(1, 15))  # 1 to 14
 
 BRANDS = [
-    'BMW', 
+    # 'BMW', 
     # 'Mercedes-Benz', 
     # 'Toyota', 
     # 'Volkswagen', 
@@ -24,12 +24,12 @@ BRANDS = [
     # 'Nissan', 
     # 'Porsche', 
     # 'Volvo', 
-    # 'Renault', 
-    # 'Land Rover', 
-    # 'Mazda',
-    # 'Mitsubishi', 
+    'Renault', 
+    'Land Rover', 
+    'Mazda',
+    'Mitsubishi', 
     # 'Alfa Romeo', 
-    # 'Lexus', 
+    'Lexus', 
     # 'Skoda', 
     # 'Honda',
     # 'Opel',
