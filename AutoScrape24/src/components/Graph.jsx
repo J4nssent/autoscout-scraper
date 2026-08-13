@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
-import { getAllListings } from '../data/loader';
+import { getAllListings } from '../loader';
 
 // scales will be updated later
 const colorScale = d3.scaleSequential(d3.interpolateYlOrRd);

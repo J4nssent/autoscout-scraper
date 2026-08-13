@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getMakesAndModels } from '../data/loader';
+import { getMakesAndModels } from '../loader';
 
 function DirectoryTree({ onSelectionChange, onEnableChange }) {
   const [data, setData] = useState({});
